@@ -1,8 +1,7 @@
-// dashboard/src/Dashboard.jsx
 import React, { useEffect, useState } from "react";
-import { getStores, addStore, toggleStatus } from "./api";
+import { getStores, addStore, toggleStatus, deleteStore } from "./api"; // Import deleteStore
 
-// ⚠️ REPLACE THIS WITH YOUR VERCEL SERVER URL
+// Keep your Vercel URL here
 const SERVER_URL = "https://kill-switch-ivory.vercel.app"; 
 
 const Dashboard = () => {
@@ -55,7 +54,18 @@ const Dashboard = () => {
     }
   };
 
-  // --- 🪄 THE MAGIC: GENERATE SCRIPT ---
+  // --- DELETE HANDLER ---
+  const handleDelete = async (siteKey) => {
+    if (window.confirm("Are you sure you want to delete this store? This cannot be undone.")) {
+      try {
+        await deleteStore(siteKey);
+        fetchStores(); // Refresh list
+      } catch (err) {
+        alert("Failed to delete store.");
+      }
+    }
+  };
+
   const handleGenerateScript = (store) => {
     const scriptCode = `
 <script>
@@ -105,40 +115,13 @@ const Dashboard = () => {
       <h1 style={{ textAlign: "center", color: "#111", marginBottom: "30px" }}>🎛️ Kill Switch Control Center</h1>
 
       {/* --- ADD NEW CLIENT --- */}
-      <div style={{ 
-        backgroundColor: "white", 
-        padding: "30px", 
-        borderRadius: "12px", 
-        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-        marginBottom: "40px",
-        border: "1px solid #eaeaea"
-      }}>
+      <div style={{ backgroundColor: "white", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", marginBottom: "40px", border: "1px solid #eaeaea" }}>
         <h3 style={{ marginTop: 0, color: "#444" }}>➕ Onboard New Client</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr auto", gap: "15px" }}>
-          <input 
-            placeholder="Client Name" 
-            value={clientName} 
-            onChange={e => setClientName(e.target.value)} 
-            style={inputStyle}
-          />
-          <input 
-            placeholder="Store Name" 
-            value={storeName} 
-            onChange={e => setStoreName(e.target.value)} 
-            style={inputStyle}
-          />
-          <input 
-            placeholder="Custom Offline Message" 
-            value={message} 
-            onChange={e => setMessage(e.target.value)} 
-            style={inputStyle}
-          />
-          <button 
-            onClick={handleAddStore}
-            style={createButtonStyle}
-          >
-            Create Client
-          </button>
+          <input placeholder="Client Name" value={clientName} onChange={e => setClientName(e.target.value)} style={inputStyle} />
+          <input placeholder="Store Name" value={storeName} onChange={e => setStoreName(e.target.value)} style={inputStyle} />
+          <input placeholder="Custom Offline Message" value={message} onChange={e => setMessage(e.target.value)} style={inputStyle} />
+          <button onClick={handleAddStore} style={createButtonStyle}>Create Client</button>
         </div>
       </div>
 
@@ -152,6 +135,7 @@ const Dashboard = () => {
             <th style={thStyle}>Status</th>
             <th style={thStyle}>Installation</th>
             <th style={thStyle}>Action</th>
+            <th style={thStyle}>Delete</th> {/* New Column */}
           </tr>
         </thead>
         <tbody>
@@ -159,23 +143,12 @@ const Dashboard = () => {
             <tr key={store.siteKey} style={{ borderBottom: "1px solid #eee", textAlign: "center", backgroundColor: "white" }}>
               <td style={tdStyle}>{store.clientName}</td>
               <td style={tdStyle}>{store.storeName}</td>
-              <td style={{...tdStyle, maxWidth: "200px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
-                {store.message}
-              </td>
-              <td style={{ 
-                ...tdStyle, 
-                fontWeight: "bold", 
-                color: store.status === "ON" ? "#28a745" : "#dc3545" 
-              }}>
+              <td style={{...tdStyle, maxWidth: "200px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{store.message}</td>
+              <td style={{ ...tdStyle, fontWeight: "bold", color: store.status === "ON" ? "#28a745" : "#dc3545" }}>
                 {store.status === "ON" ? "● ONLINE" : "● OFFLINE"}
               </td>
               <td style={tdStyle}>
-                <button 
-                  onClick={() => handleGenerateScript(store)}
-                  style={codeButtonStyle}
-                >
-                  &lt;/&gt; Get Script
-                </button>
+                <button onClick={() => handleGenerateScript(store)} style={codeButtonStyle}>&lt;/&gt; Get Script</button>
               </td>
               <td style={tdStyle}>
                 <button 
@@ -183,6 +156,15 @@ const Dashboard = () => {
                   style={store.status === "ON" ? killButtonStyle : activateButtonStyle}
                 >
                   {store.status === "ON" ? "KILL SITE" : "ACTIVATE"}
+                </button>
+              </td>
+              <td style={tdStyle}>
+                {/* DELETE BUTTON */}
+                <button 
+                  onClick={() => handleDelete(store.siteKey)}
+                  style={deleteButtonStyle}
+                >
+                  🗑️
                 </button>
               </td>
             </tr>
@@ -198,14 +180,8 @@ const Dashboard = () => {
               <h3 style={{margin:0}}>📜 Installation Script</h3>
               <button onClick={() => setShowModal(false)} style={closeButtonStyle}>✕</button>
             </div>
-            <p style={{color: "#666", fontSize: "0.9rem"}}>
-              Copy this code and paste it inside <b>layout/theme.liquid</b> after the <code>&lt;body&gt;</code> tag.
-            </p>
-            <textarea 
-              readOnly 
-              value={selectedScript} 
-              style={textareaStyle} 
-            />
+            <p style={{color: "#666", fontSize: "0.9rem"}}>Copy this code and paste it inside <b>layout/theme.liquid</b> after the <code>&lt;body&gt;</code> tag.</p>
+            <textarea readOnly value={selectedScript} style={textareaStyle} />
             <div style={{marginTop: "15px", textAlign: "right"}}>
               <span style={{color: "green", marginRight: "10px", fontWeight: "bold"}}>{copySuccess}</span>
               <button onClick={copyToClipboard} style={copyButtonStyle}>📋 Copy Code</button>
@@ -225,8 +201,8 @@ const tdStyle = { padding: "15px", textAlign: "left" };
 const codeButtonStyle = { padding: "8px 12px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "0.9rem" };
 const killButtonStyle = { padding: "8px 12px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" };
 const activateButtonStyle = { padding: "8px 12px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" };
+const deleteButtonStyle = { padding: "8px 12px", backgroundColor: "#666", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "1rem" }; // New Style
 
-// Modal Styles
 const modalOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 };
 const modalContentStyle = { backgroundColor: "white", padding: "25px", borderRadius: "10px", width: "600px", maxWidth: "90%", boxShadow: "0 10px 30px rgba(0,0,0,0.2)" };
 const textareaStyle = { width: "100%", height: "250px", fontFamily: "monospace", padding: "10px", backgroundColor: "#f4f4f4", border: "1px solid #ddd", borderRadius: "5px", fontSize: "0.85rem", resize: "none" };

@@ -8,7 +8,7 @@ const app = express();
 // 1. AGGRESSIVE CORS SETUP (Allows Shopify to connect)
 app.use(cors({
   origin: "*", 
-  methods: ["GET", "POST", "OPTIONS"],
+  methods: ["GET", "POST", "OPTIONS", "DELETE"], // <--- Added DELETE here
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
@@ -74,7 +74,15 @@ app.post("/toggle_status", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+app.delete("/delete_store/:siteKey", async (req, res) => {
+  try {
+    const result = await Store.findOneAndDelete({ siteKey: req.params.siteKey });
+    if (!result) return res.status(404).json({ error: "Store not found" });
+    res.json({ message: "Store deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // PUBLIC Check Status
 app.get("/check_status/:siteKey", async (req, res) => {
   try {
