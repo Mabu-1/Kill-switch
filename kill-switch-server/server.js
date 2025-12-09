@@ -96,5 +96,8 @@ app.get("/check_status/:siteKey", async (req, res) => {
 });
 
 // Start Server
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+module.exports = app; // <--- ADD THIS LINE FOR VERCEL!
