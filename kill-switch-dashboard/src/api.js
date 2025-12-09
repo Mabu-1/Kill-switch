@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const SERVER_URL = "https://kill-switch-h0ubcf1e7-mabus-projects.vercel.app";
+const SERVER_URL = "https://kill-switch-ivory.vercel.app";
 
 export const getStores = async () => {
   const res = await axios.get(`${SERVER_URL}/stores`);
