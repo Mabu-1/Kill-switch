@@ -7,7 +7,7 @@ const SERVER_URL = "https://kill-switch-h0ubcf1e7-mabus-projects.vercel.app";
 
 const Dashboard = () => {
   const [stores, setStores] = useState([]);
-  gi
+  
   // Form Inputs
   const [clientName, setClientName] = useState("");
   const [storeName, setStoreName] = useState("");
