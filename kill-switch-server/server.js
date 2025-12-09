@@ -5,32 +5,42 @@ require("dotenv").config();
 
 const app = express();
 
-// Middleware
-app.use(cors()); // Allow Dashboard and Shopify to talk to server
+// 1. AGGRESSIVE CORS SETUP (Allows Shopify to connect)
+app.use(cors({
+  origin: "*", 
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
 
-// 1. Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ DB Connection Error:", err));
+// 2. ROBUST DATABASE CONNECTION
+// We add options to make it connect faster or fail cleanly
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 5000 // Fail after 5 seconds instead of hanging
+})
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => console.error("❌ DB Connection Error:", err));
 
-// 2. Define the Schema (Structure)
+// Define Schema
 const storeSchema = new mongoose.Schema({
-  clientName: String,  // New field
+  clientName: String,
   storeName: String,
-  siteKey: String,     // Auto-generated
+  siteKey: String,
   message: String,
   status: { type: String, default: "ON" }
 });
-
 const Store = mongoose.model("Store", storeSchema);
 
-// Helper: Generate Random Key (8 chars)
 const generateKey = () => Math.random().toString(36).substring(2, 10);
 
 // --- ROUTES ---
 
-// A. Get all data (For Dashboard Admin)
+// Test Route (To check if server is alive)
+app.get("/", (req, res) => {
+  res.send("Kill Switch Server is Alive!");
+});
+
 app.get("/stores", async (req, res) => {
   try {
     const stores = await Store.find();
@@ -40,21 +50,11 @@ app.get("/stores", async (req, res) => {
   }
 });
 
-// B. Add new client (For Dashboard Admin)
 app.post("/add_store", async (req, res) => {
   try {
     const { clientName, storeName, message } = req.body;
-    
-    // Auto-generate the unique key here
     const siteKey = generateKey();
-    
-    const newStore = new Store({ 
-      clientName, 
-      storeName, 
-      message, 
-      siteKey 
-    });
-    
+    const newStore = new Store({ clientName, storeName, message, siteKey });
     await newStore.save();
     res.json(newStore);
   } catch (err) {
@@ -62,13 +62,11 @@ app.post("/add_store", async (req, res) => {
   }
 });
 
-// C. Toggle Status (For Dashboard Admin)
 app.post("/toggle_status", async (req, res) => {
   try {
     const { key, status } = req.body;
     const store = await Store.findOne({ siteKey: key });
     if (!store) return res.status(404).json({ error: "Store not found" });
-    
     store.status = status;
     await store.save();
     res.json(store);
@@ -77,27 +75,25 @@ app.post("/toggle_status", async (req, res) => {
   }
 });
 
-// D. PUBLIC Check Status (For Shopify Store Script)
+// PUBLIC Check Status
 app.get("/check_status/:siteKey", async (req, res) => {
   try {
     const store = await Store.findOne({ siteKey: req.params.siteKey });
     
-    // If invalid key, pretend everything is fine (don't break their site)
+    // If invalid key, return ON so we don't break the site
     if (!store) return res.json({ status: "ON" });
 
-    // Only send public info
     res.json({ 
       status: store.status, 
       message: store.message 
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Server Error" });
   }
 });
-
-// Start Server
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-module.exports = app; // <--- ADD THIS LINE FOR VERCEL!
+module.exports = app;
