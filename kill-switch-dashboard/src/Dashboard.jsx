@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { getStores, addStore, toggleStatus } from "./api";
 
 // ⚠️ REPLACE THIS WITH YOUR VERCEL SERVER URL
-const SERVER_URL = "https://kill-switch-server.vercel.app"; 
+const SERVER_URL = "https://kill-switch-ivory.vercel.app"; 
 
 const Dashboard = () => {
   const [stores, setStores] = useState([]);
